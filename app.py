@@ -1,74 +1,65 @@
 import os
 import tkinter as tk
-from tkinter import Listbox, END, Scrollbar
+from PIL import Image, ImageTk
 import pygame
+from modules.style import create_widgets
 
 # Inicializar pygame mixer
 pygame.mixer.init()
 
-# Ruta base para las canciones (ubicada en la misma carpeta que el archivo .py)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_PATH = os.path.join(BASE_DIR, "files")
 
 class MP3Player:
     def __init__(self, root):
         self.root = root
-        self.root.title("Reproductor MP3")
-        self.root.geometry("600x400")
+        self.root.title("Reproductor MP3 - Biblioteca")
+        self.root.geometry("800x600")
         self.root.config(bg="#2C3E50")
 
-        # Variables de reproducción
         self.current_song = None
         self.playing = False
         self.paused = False
+        self.song_list = []
 
-        # Crear widgets de interfaz y cargar canciones
-        self.create_widgets()
-        self.load_songs()
+        # Variables para mostrar la canción y progreso
+        self.album_art = None
+        self.album_image = None
+        self.song_duration = 0
 
-    def create_widgets(self):
-        # Etiqueta de título
-        title_label = tk.Label(self.root, text="Reproductor de MP3", font=("Arial", 20, "bold"), bg="#2C3E50", fg="#ECF0F1")
-        title_label.pack(pady=10)
+        # Llamada a la nueva función
+        self.widgets = create_widgets(self.root, self.select_song, self.previous_song, self.toggle_play_pause, self.next_song)
+        self.tree = self.widgets["tree"]
+        self.album_art = self.widgets["album_art"]
+        self.song_label = self.widgets["song_label"]
+        self.progress_var = self.widgets["progress_var"]
+        self.progress_bar = self.widgets["progress_bar"]
+        self.play_pause_button = self.widgets["play_pause_button"]
 
-        # Lista de canciones con barra de desplazamiento
-        frame_listbox = tk.Frame(self.root, bg="#2C3E50")
-        frame_listbox.pack(pady=10)
+        self.load_library()
 
-        scrollbar = Scrollbar(frame_listbox)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.song_listbox = Listbox(frame_listbox, selectmode=tk.SINGLE, bg="#34495E", fg="white", font=("Arial", 12), yscrollcommand=scrollbar.set, width=50, height=12)
-        self.song_listbox.pack()
-        scrollbar.config(command=self.song_listbox.yview)
+    def load_library(self):
+        self.song_list = []
+        self.add_folder_to_tree("", BASE_PATH)
 
-        # Botones de control en un frame
-        frame_controls = tk.Frame(self.root, bg="#2C3E50")
-        frame_controls.pack(pady=20)
+    def add_folder_to_tree(self, parent, path):
+        for item in os.listdir(path):
+            item_path = os.path.join(path, item)
+            if os.path.isdir(item_path):
+                folder_id = self.tree.insert(parent, "end", text=item, values=("", item_path))
+                self.add_folder_to_tree(folder_id, item_path)
+            elif item.endswith(".mp3"):
+                song_id = self.tree.insert(parent, "end", text=item, values=(item, item_path))
+                self.song_list.append(item_path)
 
-        # Botón de canción anterior
-        self.prev_button = tk.Button(frame_controls, text="⏮", command=self.previous_song, bg="#2C3E50", fg="white", font=("Arial", 20), borderwidth=0, activebackground="#2C3E50")
-        self.prev_button.grid(row=0, column=0, padx=20)
-
-        # Botón central de reproducción/pausa
-        self.play_pause_button = tk.Button(frame_controls, text="▶️", command=self.toggle_play_pause, bg="#2C3E50", fg="white", font=("Arial", 20), borderwidth=0, activebackground="#2C3E50")
-        self.play_pause_button.grid(row=0, column=1, padx=20)
-
-        # Botón de canción siguiente
-        self.next_button = tk.Button(frame_controls, text="⏭", command=self.next_song, bg="#2C3E50", fg="white", font=("Arial", 20), borderwidth=0, activebackground="#2C3E50")
-        self.next_button.grid(row=0, column=2, padx=20)
-
-    def load_songs(self):
-        """ Cargar todas las canciones en la lista de canciones. """
-        for root, dirs, files in os.walk(BASE_PATH):
-            for file in files:
-                if file.endswith(".mp3"):
-                    song_path = os.path.join(root, file)
-                    song_display_name = song_path.replace(BASE_PATH + os.sep, "")  # Nombre relativo
-                    self.song_listbox.insert(END, song_display_name)
+    def select_song(self, event):
+        selected_item = self.tree.selection()[0]
+        song_path = self.tree.item(selected_item, "values")[1]
+        if song_path.endswith(".mp3"):
+            self.play_song(song_path)
 
     def toggle_play_pause(self):
-        """ Alternar entre reproducir y pausar la canción. """
         if self.playing:
             if self.paused:
                 pygame.mixer.music.unpause()
@@ -78,56 +69,49 @@ class MP3Player:
                 pygame.mixer.music.pause()
                 self.play_pause_button.config(text="▶️")
                 self.paused = True
+        elif self.current_song:
+            self.play_song(self.current_song)
+
+    def play_song(self, song_path=None):
+        if song_path:
+            self.current_song = song_path
+            pygame.mixer.music.load(song_path)
+            pygame.mixer.music.play()
+            self.song_label.config(text=os.path.basename(song_path).replace(".mp3", ""))
+            self.load_album_art(song_path)
+            self.play_pause_button.config(text="⏸")
+            self.playing = True
+            self.paused = False
+            self.update_progress()
+
+    def load_album_art(self, song_path):
+        album_dir = os.path.dirname(song_path)
+        cover_path = os.path.join(album_dir, "cover.jpg")
+
+        if os.path.exists(cover_path):
+            album_image = Image.open(cover_path)
+            album_image = album_image.resize((100, 100), Image.ANTIALIAS)
+            self.album_image = ImageTk.PhotoImage(album_image)
+            self.album_art.config(image=self.album_image)
         else:
-            self.play_song()
+            self.album_art.config(image="")  # Placeholder si no hay imagen
 
-    def play_song(self):
-        """ Reproducir la canción seleccionada. """
-        selected_song = self.song_listbox.get(tk.ACTIVE)
-        song_path = os.path.join(BASE_PATH, selected_song)
-
-        # Detener cualquier canción que esté sonando
-        pygame.mixer.music.load(song_path)
-        pygame.mixer.music.play()
-        self.play_pause_button.config(text="⏸")
-        self.current_song = selected_song
-        self.playing = True
-        self.paused = False
-
-    def stop_song(self):
-        """ Detener la canción en reproducción. """
-        pygame.mixer.music.stop()
-        self.play_pause_button.config(text="▶️")
-        self.playing = False
-        self.current_song = None
+    def update_progress(self):
+        if self.playing and not self.paused:
+            self.progress_var.set(pygame.mixer.music.get_pos() / 1000)  # Tiempo en segundos
+            self.root.after(1000, self.update_progress)
 
     def previous_song(self):
-        """ Reproducir la canción anterior. """
-        current_selection = self.song_listbox.curselection()
-        if not current_selection:
-            previous_index = self.song_listbox.size() - 1
-        else:
-            current_index = current_selection[0]
-            previous_index = (current_index - 1) % self.song_listbox.size()
-
-        self.song_listbox.select_clear(0, END)
-        self.song_listbox.select_set(previous_index)
-        self.song_listbox.activate(previous_index)
-        self.play_song()
+        if self.current_song:
+            current_index = self.song_list.index(self.current_song)
+            previous_index = (current_index - 1) % len(self.song_list)
+            self.play_song(self.song_list[previous_index])
 
     def next_song(self):
-        """ Reproducir la siguiente canción. """
-        current_selection = self.song_listbox.curselection()
-        if not current_selection:
-            next_index = 0
-        else:
-            current_index = current_selection[0]
-            next_index = (current_index + 1) % self.song_listbox.size()
-
-        self.song_listbox.select_clear(0, END)
-        self.song_listbox.select_set(next_index)
-        self.song_listbox.activate(next_index)
-        self.play_song()
+        if self.current_song:
+            current_index = self.song_list.index(self.current_song)
+            next_index = (current_index + 1) % len(self.song_list)
+            self.play_song(self.song_list[next_index])
 
 # Crear y ejecutar la aplicación
 root = tk.Tk()
