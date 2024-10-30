@@ -71,8 +71,8 @@ def create_widgets(root, select_song, previous_song, toggle_play_pause, next_son
         "song_label": song_label,
         "play_pause_button": play_pause_button,
         "album_name_label": album_name_label,
-        "progress_frame": progress_frame,  # Añadido aquí
-        "circle": circle,  # Añadido aquí
-        "circle_indicator": circle_indicator,  # Añadido aquí
-        "circle_radius": circle_radius  # Añadido aquí
+        "progress_frame": progress_frame,
+        "circle": circle,
+        "circle_indicator": circle_indicator,
+        "circle_radius": circle_radius,
     }

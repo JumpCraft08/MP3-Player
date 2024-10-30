@@ -30,10 +30,10 @@ class MP3Player:
         self.song_label = self.widgets["song_label"]
         self.play_pause_button = self.widgets["play_pause_button"]
         self.album_name_label = self.widgets["album_name_label"]
-        self.progress_frame = self.widgets["progress_frame"]  # Añadido aquí
-        self.circle = self.widgets["circle"]  # Añadido aquí
-        self.circle_indicator = self.widgets["circle_indicator"]  # Añadido aquí
-        self.circle_radius = self.widgets["circle_radius"]  # Añadido aquí
+        self.progress_frame = self.widgets["progress_frame"]
+        self.circle = self.widgets["circle"]
+        self.circle_indicator = self.widgets["circle_indicator"]
+        self.circle_radius = self.widgets["circle_radius"]
 
         # Añadir eventos para arrastrar el círculo
         self.circle.bind("<Button-1>", self.start_drag)
@@ -41,7 +41,6 @@ class MP3Player:
         self.circle.bind("<ButtonRelease-1>", self.release)
 
         self.load_library()
-        self.update_progress()  # Añadir actualización de progreso
 
     def load_library(self):
         self.song_list = []
@@ -107,7 +106,6 @@ class MP3Player:
             self.root.after(1000, self.update_progress)
 
     def load_album_art(self, song_path):
-        # Cargar la carátula del álbum si está disponible
         album_art_path = os.path.join(os.path.dirname(song_path), "album_art.jpg")  # Suponiendo que la carátula está en el mismo directorio
         if os.path.exists(album_art_path):
             img = Image.open(album_art_path)
@@ -118,28 +116,36 @@ class MP3Player:
             self.album_art.config(image='')  # Limpiar la imagen si no hay
 
     def load_song_metadata(self, song_path):
-        # Actualizar la etiqueta del álbum (esto es opcional y se puede personalizar)
         album_name = "Desconocido"
         self.album_name_label.config(text=f"Álbum: {album_name}")
 
     def start_drag(self, event):
-        self.circle.bind("<B1-Motion>", self.drag)
+        self.dragging = True
 
     def drag(self, event):
-        # Mueve el círculo a la posición donde se está arrastrando
-        x = event.x
-        x = max(0, min(x, self.root.winfo_width()))  # Asegura que no se salga de los límites
-        self.circle.coords(self.circle_indicator, x - self.circle_radius, 0, x + self.circle_radius, self.circle_radius * 2)
+        if hasattr(self, 'dragging') and self.dragging:
+            # Mueve el círculo a la posición donde se está arrastrando
+            x = event.x
+            x = max(0, min(x, self.root.winfo_width()))  # Asegura que no se salga de los límites
+            self.circle.coords(self.circle_indicator, x - self.circle_radius, 0, x + self.circle_radius, self.circle_radius * 2)
 
     def release(self, event):
-        # Al soltar el círculo, saltar a la posición correspondiente de la canción
-        x = event.x
-        x = max(0, min(x, self.root.winfo_width()))  # Asegura que no se salga de los límites
-        audio = MP3(self.current_song)
-        song_length = audio.info.length
-        new_position = (x / self.root.winfo_width()) * song_length
-        pygame.mixer.music.seek(new_position)  # Saltar a la nueva posición
-        self.update_progress()  # Actualizar la barra de progreso
+        if hasattr(self, 'dragging') and self.dragging:
+            self.dragging = False  # Dejar de arrastrar
+            # Al soltar el círculo, saltar a la posición correspondiente de la canción
+            x = event.x
+            x = max(0, min(x, self.root.winfo_width()))  # Asegura que no se salga de los límites
+            audio = MP3(self.current_song)
+            song_length = audio.info.length
+            new_position = (x / self.root.winfo_width()) * song_length
+
+            # Reproducir la canción desde la nueva posición
+            pygame.mixer.music.stop()  # Detener la canción actual
+            pygame.mixer.music.load(self.current_song)  # Cargar la canción nuevamente
+            pygame.mixer.music.play(0, new_position)  # Reproducir desde la nueva posición
+
+            # Actualiza el progreso para reflejar la nueva posición
+            self.update_progress()  # Actualizar la barra de progreso
 
     def previous_song(self):
         current_index = self.song_list.index(self.current_song)
