@@ -2,6 +2,7 @@ import os
 import tkinter as tk
 from PIL import Image, ImageTk
 import pygame
+from mutagen.mp3 import MP3
 from modules.style import create_widgets
 
 # Inicializar pygame mixer
@@ -22,22 +23,25 @@ class MP3Player:
         self.paused = False
         self.song_list = []
 
-        # Variables para mostrar la canción y progreso
-        self.album_art = None
-        self.album_image = None
-        self.song_duration = 0
-
         # Llamada a la nueva función
         self.widgets = create_widgets(self.root, self.select_song, self.previous_song, self.toggle_play_pause, self.next_song)
         self.tree = self.widgets["tree"]
         self.album_art = self.widgets["album_art"]
         self.song_label = self.widgets["song_label"]
-        self.progress_var = self.widgets["progress_var"]
-        self.progress_bar = self.widgets["progress_bar"]
         self.play_pause_button = self.widgets["play_pause_button"]
+        self.album_name_label = self.widgets["album_name_label"]
+        self.progress_frame = self.widgets["progress_frame"]  # Añadido aquí
+        self.circle = self.widgets["circle"]  # Añadido aquí
+        self.circle_indicator = self.widgets["circle_indicator"]  # Añadido aquí
+        self.circle_radius = self.widgets["circle_radius"]  # Añadido aquí
+
+        # Añadir eventos para arrastrar el círculo
+        self.circle.bind("<Button-1>", self.start_drag)
+        self.circle.bind("<B1-Motion>", self.drag)
+        self.circle.bind("<ButtonRelease-1>", self.release)
 
         self.load_library()
-
+        self.update_progress()  # Añadir actualización de progreso
 
     def load_library(self):
         self.song_list = []
@@ -79,41 +83,75 @@ class MP3Player:
             pygame.mixer.music.play()
             self.song_label.config(text=os.path.basename(song_path).replace(".mp3", ""))
             self.load_album_art(song_path)
+            self.load_song_metadata(song_path)
             self.play_pause_button.config(text="⏸")
             self.playing = True
             self.paused = False
-            self.update_progress()
-
-    def load_album_art(self, song_path):
-        album_dir = os.path.dirname(song_path)
-        cover_path = os.path.join(album_dir, "cover.jpg")
-
-        if os.path.exists(cover_path):
-            album_image = Image.open(cover_path)
-            album_image = album_image.resize((100, 100), Image.ANTIALIAS)
-            self.album_image = ImageTk.PhotoImage(album_image)
-            self.album_art.config(image=self.album_image)
-        else:
-            self.album_art.config(image="")  # Placeholder si no hay imagen
+            self.update_progress()  # Iniciar la actualización del progreso
 
     def update_progress(self):
-        if self.playing and not self.paused:
-            self.progress_var.set(pygame.mixer.music.get_pos() / 1000)  # Tiempo en segundos
+        if self.playing:
+            current_time = pygame.mixer.music.get_pos() / 1000  # tiempo en segundos
+            audio = MP3(self.current_song)
+            song_length = audio.info.length
+
+            # Calcular el porcentaje del tiempo transcurrido
+            progress_percentage = current_time / song_length if song_length > 0 else 0
+            progress_width = self.root.winfo_width() * progress_percentage
+
+            # Actualizar la posición del círculo
+            self.circle.coords(self.circle_indicator, progress_width - self.circle_radius, 0, progress_width + self.circle_radius, self.circle_radius * 2)
+            self.circle.update()
+
+            # Llama a esta función de nuevo después de 1 segundo
             self.root.after(1000, self.update_progress)
 
+    def load_album_art(self, song_path):
+        # Cargar la carátula del álbum si está disponible
+        album_art_path = os.path.join(os.path.dirname(song_path), "album_art.jpg")  # Suponiendo que la carátula está en el mismo directorio
+        if os.path.exists(album_art_path):
+            img = Image.open(album_art_path)
+            img = img.resize((100, 100), Image.ANTIALIAS)  # Redimensionar la imagen
+            self.album_art.img = ImageTk.PhotoImage(img)
+            self.album_art.config(image=self.album_art.img)
+        else:
+            self.album_art.config(image='')  # Limpiar la imagen si no hay
+
+    def load_song_metadata(self, song_path):
+        # Actualizar la etiqueta del álbum (esto es opcional y se puede personalizar)
+        album_name = "Desconocido"
+        self.album_name_label.config(text=f"Álbum: {album_name}")
+
+    def start_drag(self, event):
+        self.circle.bind("<B1-Motion>", self.drag)
+
+    def drag(self, event):
+        # Mueve el círculo a la posición donde se está arrastrando
+        x = event.x
+        x = max(0, min(x, self.root.winfo_width()))  # Asegura que no se salga de los límites
+        self.circle.coords(self.circle_indicator, x - self.circle_radius, 0, x + self.circle_radius, self.circle_radius * 2)
+
+    def release(self, event):
+        # Al soltar el círculo, saltar a la posición correspondiente de la canción
+        x = event.x
+        x = max(0, min(x, self.root.winfo_width()))  # Asegura que no se salga de los límites
+        audio = MP3(self.current_song)
+        song_length = audio.info.length
+        new_position = (x / self.root.winfo_width()) * song_length
+        pygame.mixer.music.seek(new_position)  # Saltar a la nueva posición
+        self.update_progress()  # Actualizar la barra de progreso
+
     def previous_song(self):
-        if self.current_song:
-            current_index = self.song_list.index(self.current_song)
-            previous_index = (current_index - 1) % len(self.song_list)
-            self.play_song(self.song_list[previous_index])
+        current_index = self.song_list.index(self.current_song)
+        if current_index > 0:
+            self.play_song(self.song_list[current_index - 1])
 
     def next_song(self):
-        if self.current_song:
-            current_index = self.song_list.index(self.current_song)
-            next_index = (current_index + 1) % len(self.song_list)
-            self.play_song(self.song_list[next_index])
+        current_index = self.song_list.index(self.current_song)
+        if current_index < len(self.song_list) - 1:
+            self.play_song(self.song_list[current_index + 1])
 
-# Crear y ejecutar la aplicación
-root = tk.Tk()
-app = MP3Player(root)
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    player = MP3Player(root)
+    root.mainloop()

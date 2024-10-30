@@ -36,10 +36,9 @@ def create_widgets(root, select_song, previous_song, toggle_play_pause, next_son
     song_label = tk.Label(info_frame, text="No hay canción en reproducción", font=("Arial", 14), fg="white", bg="#2C3E50")
     song_label.grid(row=0, column=1, sticky="w")
 
-    # Barra de progreso
-    progress_var = tk.DoubleVar()
-    progress_bar = ttk.Scale(info_frame, variable=progress_var, orient="horizontal", length=200, from_=0, to=100, state="disabled")
-    progress_bar.grid(row=1, column=1, sticky="w")
+    # Etiqueta para mostrar el álbum
+    album_name_label = tk.Label(info_frame, text="Álbum: Desconocido", font=("Arial", 12), fg="#BDC3C7", bg="#2C3E50")
+    album_name_label.grid(row=1, column=1, sticky="w")
 
     # Botones de control
     frame_controls = tk.Frame(info_frame, bg="#2C3E50")
@@ -54,11 +53,26 @@ def create_widgets(root, select_song, previous_song, toggle_play_pause, next_son
     next_button = tk.Button(frame_controls, text="⏭", command=next_song, bg="#2C3E50", fg="white", font=("Arial", 20), borderwidth=0, activebackground="#2C3E50")
     next_button.grid(row=0, column=2, padx=5)
 
+    # Barra de progreso
+    progress_frame = tk.Frame(root, bg="#00BFFF", height=10)  # Color azul claro
+    progress_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+    # Círculo de progreso
+    circle_radius = 10
+    circle = tk.Canvas(progress_frame, width=800, height=10)
+    circle.pack(fill=tk.X)
+
+    # Dibuja el círculo en la posición inicial
+    circle_indicator = circle.create_oval(0, 0, circle_radius * 2, circle_radius * 2, fill="#34495E", outline="")
+
     return {
         "tree": tree,
         "album_art": album_art,
         "song_label": song_label,
-        "progress_var": progress_var,
-        "progress_bar": progress_bar,
-        "play_pause_button": play_pause_button
+        "play_pause_button": play_pause_button,
+        "album_name_label": album_name_label,
+        "progress_frame": progress_frame,  # Añadido aquí
+        "circle": circle,  # Añadido aquí
+        "circle_indicator": circle_indicator,  # Añadido aquí
+        "circle_radius": circle_radius  # Añadido aquí
     }
