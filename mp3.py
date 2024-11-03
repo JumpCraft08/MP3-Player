@@ -20,6 +20,10 @@ class ReproductorMP3:
         self.archivo_actual = None
         self.indice_actual = 0
 
+        # Define el evento de finalización de música
+        self.MUSICA_TERMINADA = pygame.USEREVENT + 1
+        pygame.mixer.music.set_endevent(self.MUSICA_TERMINADA)
+
         # Configurar la interfaz
         self.lista = tk.Listbox(master, width=50, height=15, bg="#ffffff", selectbackground="#007BFF", font=("Arial", 12))
         self.lista.pack(pady=20)
@@ -98,7 +102,7 @@ class ReproductorMP3:
 
     def check_music_end(self):
         for event in pygame.event.get():
-            if event.type == pygame.USEREVENT + 1:  # Verifica si la música ha terminado
+            if event.type == self.MUSICA_TERMINADA:  # Verifica si la música ha terminado
                 self.cancion_siguiente()  # Reproduce la siguiente canción
         self.master.after(100, self.check_music_end)  # Revisa el evento cada 100 ms
 
