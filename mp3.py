@@ -33,8 +33,8 @@ class ReproductorMP3:
         self.marco_textos.pack(side=tk.LEFT, padx=10)
 
         # Etiquetas para el título de la canción y el artista
-        self.titulo_cancion = tk.Label(self.marco_textos, text="No hay canción sonando", bg="#3e444f", fg="#ffffff", font=("Arial", 14, "bold"))
-        self.titulo_cancion.pack(side=tk.TOP)
+        self.titulo_cancion = tk.Label(self.marco_textos, text="No hay canción sonando", bg="#3e444f", fg="#ffffff", font=("Arial", 14, "bold"), anchor='w')
+        self.titulo_cancion.pack(side=tk.TOP, fill=tk.X)
 
         self.artista_cancion = tk.Label(self.marco_textos, text="", bg="#3e444f", fg="#a9a9a9", font=("Arial", 12))
         self.artista_cancion.pack(side=tk.TOP)
@@ -120,6 +120,12 @@ class ReproductorMP3:
         if self.archivo_actual:
             nombre_archivo = os.path.basename(self.archivo_actual)
             nombre_sin_extension = os.path.splitext(nombre_archivo)[0]  # Elimina la extensión
+            max_length = 24  # Longitud máxima del texto
+
+            # Recorta el nombre si es necesario
+            if len(nombre_sin_extension) > max_length:
+                nombre_sin_extension = nombre_sin_extension[:max_length - 3] + "..."
+
             self.titulo_cancion.config(text=nombre_sin_extension)
 
             try:
