@@ -1,11 +1,12 @@
 import os
 import json
-import pygame.mixer
+import pygame
 import tkinter as tk
 from tkinter import Toplevel, ttk
 from mutagen.mp3 import MP3
 
-# Inicializa solo el módulo de mezcla de Pygame
+# Inicializa todos los módulos de Pygame
+pygame.init()
 pygame.mixer.init()
 
 class ReproductorMP3:
@@ -18,7 +19,6 @@ class ReproductorMP3:
         self.archivos_mp3 = []
         self.archivo_actual = None
         self.indice_actual = 0
-        self.musica_reproduciendo = False  # Indica si se está reproduciendo música
 
         # Configurar la interfaz
         self.lista = tk.Listbox(master, width=50, height=15, bg="#ffffff", selectbackground="#007BFF", font=("Arial", 12))
@@ -97,9 +97,10 @@ class ReproductorMP3:
         self.master.after(100, self.check_music_end)  # Comienza a comprobar el fin de la música
 
     def check_music_end(self):
-        if self.musica_reproduciendo and not pygame.mixer.music.get_busy():  # Comprueba si la música ha terminado
-            self.cancion_siguiente()  # Reproduce la siguiente canción
-        self.master.after(100, self.check_music_end)  # Revisa el estado cada 100 ms
+        for event in pygame.event.get():
+            if event.type == pygame.USEREVENT + 1:  # Verifica si la música ha terminado
+                self.cancion_siguiente()  # Reproduce la siguiente canción
+        self.master.after(100, self.check_music_end)  # Revisa el evento cada 100 ms
 
     def cargar_mp3(self):
         directorio = 'files'  # Carpeta estática
@@ -120,7 +121,6 @@ class ReproductorMP3:
             self.archivo_actual = self.archivos_mp3[self.indice_actual]
             pygame.mixer.music.load(self.archivo_actual)
             pygame.mixer.music.play()
-            self.musica_reproduciendo = True  # Marca que ahora se está reproduciendo música
             self.actualizar_info_cancion()
 
     def actualizar_info_cancion(self):
@@ -159,15 +159,11 @@ class ReproductorMP3:
         if self.indice_actual < len(self.archivos_mp3) - 1:
             self.indice_actual += 1
             self.cargar_y_reproducir_cancion()
-        else:
-            self.indice_actual = 0  # Reinicia al inicio si está al final
-            self.cargar_y_reproducir_cancion()
 
     def cargar_y_reproducir_cancion(self):
         self.archivo_actual = self.archivos_mp3[self.indice_actual]
         pygame.mixer.music.load(self.archivo_actual)
         pygame.mixer.music.play()
-        self.musica_reproduciendo = True  # Marca que ahora se está reproduciendo música
         self.lista.selection_clear(0, tk.END)
         self.lista.selection_set(self.indice_actual)
         self.lista.activate(self.indice_actual)
@@ -177,4 +173,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = ReproductorMP3(root)
     root.mainloop()
-
