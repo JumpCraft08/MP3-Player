@@ -5,7 +5,8 @@ import tkinter as tk
 from tkinter import Toplevel, ttk, messagebox
 from mutagen.mp3 import MP3
 from modules.add_music import añadir_musica
-from modules.license import abrir_informacion  # Importar la función desde license.py
+from modules.license import abrir_informacion
+from modules.progress_bar import ProgressBar  # Importar la clase ProgressBar
 
 # Inicializa todos los módulos de Pygame
 pygame.init()
@@ -78,11 +79,14 @@ class ReproductorMP3:
         self.boton_siguiente = tk.Button(self.marco_botones, text="⏭️", command=lambda: self.cambiar_cancion(1), bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
         self.boton_siguiente.grid(row=0, column=2, padx=5)
 
+        # Barra de progreso
+        self.progress_bar = ProgressBar(self.master, self.seek_music)
+
         # Menú contextual para ajustes
         self.menu_contextual = tk.Menu(self.master, tearoff=0)
         self.menu_contextual.add_command(label="Ajustes", command=self.abrir_ajustes)
         self.menu_contextual.add_command(label="Añadir música", command=self.añadir_musica)
-        self.menu_contextual.add_command(label="Información", command=lambda: abrir_informacion(self.master))  # Llama a la función desde license.py
+        self.menu_contextual.add_command(label="Información", command=lambda: abrir_informacion(self.master))
         self.master.bind("<Button-3>", self.mostrar_menu_contextual)
 
     def mostrar_menu_contextual(self, event):
@@ -155,6 +159,7 @@ class ReproductorMP3:
                 pygame.mixer.music.play()
                 self.actualizar_info_cancion()
                 self.boton_pausa_reproducir.config(text="⏸️")
+                self.actualizar_progreso()  # Iniciar la actualización de progreso
             except Exception as e:
                 self.mostrar_error("No se pudo reproducir la canción", str(e))
 
@@ -187,6 +192,19 @@ class ReproductorMP3:
         nuevo_indice = self.indice_actual + direccion
         if 0 <= nuevo_indice < len(self.archivos_mp3):
             self.reproducir_cancion(nuevo_indice)
+
+    def actualizar_progreso(self):
+        if pygame.mixer.music.get_busy():
+            current_time = pygame.mixer.music.get_pos() / 1000  # Tiempo actual en segundos
+            total_time = MP3(self.archivo_actual).info.length if self.archivo_actual else 0
+            self.progress_bar.update(current_time, total_time)
+        self.master.after(1000, self.actualizar_progreso)  # Actualizar cada segundo
+
+    def seek_music(self, value):
+        total_time = MP3(self.archivo_actual).info.length if self.archivo_actual else 0
+        if total_time > 0:
+            seek_time = (value / 100) * total_time  # Calcular el tiempo en segundos
+            pygame.mixer.music.play(start=seek_time)  # Reproducir desde el tiempo calculado
 
 if __name__ == "__main__":
     root = tk.Tk()

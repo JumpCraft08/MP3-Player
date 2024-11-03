@@ -4,7 +4,7 @@ from tkinter import Toplevel, messagebox
 def abrir_informacion(master):
     ventana_info = Toplevel(master)
     ventana_info.title("Información")
-    ventana_info.geometry("300x200")
+    ventana_info.geometry("350x200")
 
     tk.Label(ventana_info, text="Reproductor MP3 - Versión 1.0\nDesarrollado por JumpCraft", justify='center').pack(pady=10)
     tk.Button(ventana_info, text="Licencia", command=lambda: mostrar_licencia()).pack(pady=10)
