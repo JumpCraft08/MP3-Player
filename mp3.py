@@ -27,7 +27,7 @@ class ReproductorMP3:
         # Configuración de la interfaz
         self.setup_ui()
 
-        self.cargar_ajustes()
+        self.modo_mostrar_por = self.cargar_ajustes()
         self.cargar_mp3()
         self.configurar_evento_finalizacion()
 
@@ -67,13 +67,13 @@ class ReproductorMP3:
         self.marco_botones = tk.Frame(self.marco_bajo, bg="#3e444f")
         self.marco_botones.pack(side=tk.RIGHT)
 
-        self.boton_anterior = tk.Button(self.marco_botones, text="⏮️", command=self.cancion_anterior, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
+        self.boton_anterior = tk.Button(self.marco_botones, text="⏮️", command=lambda: self.cambiar_cancion(-1), bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
         self.boton_anterior.grid(row=0, column=0, padx=5)
 
         self.boton_pausa_reproducir = tk.Button(self.marco_botones, text="▶️", command=self.pausar_reproducir, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
         self.boton_pausa_reproducir.grid(row=0, column=1, padx=5)
 
-        self.boton_siguiente = tk.Button(self.marco_botones, text="⏭️", command=self.cancion_siguiente, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
+        self.boton_siguiente = tk.Button(self.marco_botones, text="⏭️", command=lambda: self.cambiar_cancion(1), bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
         self.boton_siguiente.grid(row=0, column=2, padx=5)
 
         # Menú contextual para ajustes
@@ -100,7 +100,8 @@ class ReproductorMP3:
         if os.path.exists('ajustes.json'):
             with open('ajustes.json', 'r') as archivo:
                 ajustes = json.load(archivo)
-                self.modo_mostrar_por = ajustes.get("modo_mostrar_por", "Canción")
+                return ajustes.get("modo_mostrar_por", "Canción")
+        return "Canción"
 
     def guardar_ajustes(self, ventana):
         ajustes = {"modo_mostrar_por": self.modo_mostrar_por}
@@ -114,7 +115,7 @@ class ReproductorMP3:
     def check_music_end(self):
         for event in pygame.event.get():
             if event.type == self.MUSICA_TERMINADA:
-                self.cancion_siguiente()
+                self.cambiar_cancion(1)
         self.master.after(100, self.check_music_end)
 
     def cargar_mp3(self):
@@ -136,11 +137,16 @@ class ReproductorMP3:
         self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
 
     def reproducir_cancion(self, index):
-        self.indice_actual = index
-        self.archivo_actual = self.archivos_mp3[self.indice_actual]
-        pygame.mixer.music.load(self.archivo_actual)
-        pygame.mixer.music.play()
-        self.actualizar_info_cancion()
+        if 0 <= index < len(self.archivos_mp3):
+            self.indice_actual = index
+            self.archivo_actual = self.archivos_mp3[self.indice_actual]
+            try:
+                pygame.mixer.music.load(self.archivo_actual)
+                pygame.mixer.music.play()
+                self.actualizar_info_cancion()
+                self.boton_pausa_reproducir.config(text="⏸️")  # Cambiar a dos barras al reproducir
+            except Exception as e:
+                print(f"Error al reproducir la canción: {e}")
 
     def actualizar_info_cancion(self):
         if self.archivo_actual:
@@ -163,21 +169,10 @@ class ReproductorMP3:
             pygame.mixer.music.unpause()
             self.boton_pausa_reproducir.config(text="⏸️")
 
-    def cancion_anterior(self):
-        if self.indice_actual > 0:
-            self.indice_actual -= 1
-            self.cargar_y_reproducir_cancion()
-
-    def cancion_siguiente(self):
-        if self.indice_actual < len(self.archivos_mp3) - 1:
-            self.indice_actual += 1
-            self.cargar_y_reproducir_cancion()
-
-    def cargar_y_reproducir_cancion(self):
-        self.archivo_actual = self.archivos_mp3[self.indice_actual]
-        pygame.mixer.music.load(self.archivo_actual)
-        pygame.mixer.music.play()
-        self.actualizar_info_cancion()
+    def cambiar_cancion(self, direccion):
+        nuevo_indice = self.indice_actual + direccion
+        if 0 <= nuevo_indice < len(self.archivos_mp3):
+            self.reproducir_cancion(nuevo_indice)
 
 if __name__ == "__main__":
     root = tk.Tk()
