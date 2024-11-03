@@ -20,17 +20,24 @@ class ReproductorMP3:
         self.archivo_actual = None
         self.indice_actual = 0
 
-        # Define el evento de finalización de música
+        # Evento de finalización de música
         self.MUSICA_TERMINADA = pygame.USEREVENT + 1
         pygame.mixer.music.set_endevent(self.MUSICA_TERMINADA)
 
+        # Configuración de la interfaz
+        self.setup_ui()
+
+        self.cargar_ajustes()
+        self.cargar_mp3()
+        self.configurar_evento_finalizacion()
+
+    def setup_ui(self):
         # Marco principal para la lista de canciones
-        self.frame_lista = tk.Frame(master, bg="#282c34")
+        self.frame_lista = tk.Frame(self.master, bg="#282c34")
         self.frame_lista.pack(pady=20, fill=tk.BOTH, expand=True)
 
-        # Canvas para la lista de canciones
         self.canvas = tk.Canvas(self.frame_lista, bg="#282c34", highlightthickness=0)
-        self.scrollbar = tk.Scrollbar(self.frame_lista, orient="vertical", command=self.canvas.yview, bg="#282c34")  # Fondo transparente
+        self.scrollbar = tk.Scrollbar(self.frame_lista, orient="vertical", command=self.canvas.yview, bg="#282c34")
         self.scrollable_frame = tk.Frame(self.canvas, bg="#282c34")
 
         self.scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
@@ -40,18 +47,16 @@ class ReproductorMP3:
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Vínculo para desplazamiento del mouse
         self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
 
         # Marco para mostrar la canción actual
-        self.marco_bajo = tk.Frame(master, bg="#3e444f")
+        self.marco_bajo = tk.Frame(self.master, bg="#3e444f")
         self.marco_bajo.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(10, 10))
 
         # Marco para los textos
         self.marco_textos = tk.Frame(self.marco_bajo, bg="#3e444f")
         self.marco_textos.pack(side=tk.LEFT, padx=10)
 
-        # Etiquetas para el título de la canción y el artista
         self.titulo_cancion = tk.Label(self.marco_textos, text="No hay canción sonando", bg="#3e444f", fg="#ffffff", font=("Arial", 14, "bold"), anchor='w')
         self.titulo_cancion.pack(side=tk.TOP, fill=tk.X)
 
@@ -62,7 +67,6 @@ class ReproductorMP3:
         self.marco_botones = tk.Frame(self.marco_bajo, bg="#3e444f")
         self.marco_botones.pack(side=tk.RIGHT)
 
-        # Botones de control
         self.boton_anterior = tk.Button(self.marco_botones, text="⏮️", command=self.cancion_anterior, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
         self.boton_anterior.grid(row=0, column=0, padx=5)
 
@@ -73,13 +77,9 @@ class ReproductorMP3:
         self.boton_siguiente.grid(row=0, column=2, padx=5)
 
         # Menú contextual para ajustes
-        self.menu_contextual = tk.Menu(master, tearoff=0)
+        self.menu_contextual = tk.Menu(self.master, tearoff=0)
         self.menu_contextual.add_command(label="Ajustes", command=self.abrir_ajustes)
         self.master.bind("<Button-3>", self.mostrar_menu_contextual)
-
-        self.cargar_ajustes()  # Cargar ajustes al iniciar
-        self.cargar_mp3()      # Cargar archivos al iniciar
-        self.configurar_evento_finalizacion()  # Configurar el evento de finalización
 
     def mostrar_menu_contextual(self, event):
         self.menu_contextual.post(event.x_root, event.y_root)
@@ -90,7 +90,6 @@ class ReproductorMP3:
         ventana_ajustes.geometry("300x200")
 
         tk.Label(ventana_ajustes, text="Mostrar por:").pack(pady=10)
-
         self.combo_mostrar_por_ajustes = ttk.Combobox(ventana_ajustes, state='readonly', values=["Canción"])
         self.combo_mostrar_por_ajustes.current(0)
         self.combo_mostrar_por_ajustes.pack(pady=10)
@@ -120,7 +119,7 @@ class ReproductorMP3:
 
     def cargar_mp3(self):
         directorio = 'files'
-        self.archivos_mp3.clear()  # Limpia la lista existente
+        self.archivos_mp3.clear()
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
