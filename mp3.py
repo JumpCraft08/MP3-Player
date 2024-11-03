@@ -2,9 +2,10 @@ import os
 import json
 import pygame
 import tkinter as tk
-from tkinter import Toplevel, ttk
+from tkinter import Toplevel, ttk, messagebox
 from mutagen.mp3 import MP3
-from modules.add_music import añadir_musica  # Importar la función
+from modules.add_music import añadir_musica
+from modules.license import abrir_informacion  # Importar la función desde license.py
 
 # Inicializa todos los módulos de Pygame
 pygame.init()
@@ -80,14 +81,15 @@ class ReproductorMP3:
         # Menú contextual para ajustes
         self.menu_contextual = tk.Menu(self.master, tearoff=0)
         self.menu_contextual.add_command(label="Ajustes", command=self.abrir_ajustes)
-        self.menu_contextual.add_command(label="Añadir música", command=self.añadir_musica)  # Añadir opción para añadir música
+        self.menu_contextual.add_command(label="Añadir música", command=self.añadir_musica)
+        self.menu_contextual.add_command(label="Información", command=lambda: abrir_informacion(self.master))  # Llama a la función desde license.py
         self.master.bind("<Button-3>", self.mostrar_menu_contextual)
 
     def mostrar_menu_contextual(self, event):
         self.menu_contextual.post(event.x_root, event.y_root)
 
     def añadir_musica(self):
-        añadir_musica(self.cargar_mp3)  # Pasar la referencia al método cargar_mp3
+        añadir_musica(self.cargar_mp3)
 
     def abrir_ajustes(self):
         ventana_ajustes = Toplevel(self.master)
@@ -134,9 +136,12 @@ class ReproductorMP3:
                 if file.endswith(".mp3"):
                     ruta_completa = os.path.join(root, file)
                     self.archivos_mp3.append(ruta_completa)
-                    label = tk.Label(self.scrollable_frame, text=file, bg="#3e444f", fg="#ffffff", font=("Arial", 12), relief="solid", bd=1, width=50, anchor='w')
-                    label.pack(pady=2, padx=5, fill=tk.X)
-                    label.bind('<Button-1>', lambda event, index=len(self.archivos_mp3): self.reproducir_cancion(index - 1))
+                    self.crear_label_cancion(file)
+
+    def crear_label_cancion(self, file):
+        label = tk.Label(self.scrollable_frame, text=file, bg="#3e444f", fg="#ffffff", font=("Arial", 12), relief="solid", bd=1, width=50, anchor='w')
+        label.pack(pady=2, padx=5, fill=tk.X)
+        label.bind('<Button-1>', lambda event, index=len(self.archivos_mp3): self.reproducir_cancion(index - 1))
 
     def on_mouse_wheel(self, event):
         self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
@@ -149,9 +154,12 @@ class ReproductorMP3:
                 pygame.mixer.music.load(self.archivo_actual)
                 pygame.mixer.music.play()
                 self.actualizar_info_cancion()
-                self.boton_pausa_reproducir.config(text="⏸️")  # Cambiar a dos barras al reproducir
+                self.boton_pausa_reproducir.config(text="⏸️")
             except Exception as e:
-                print(f"Error al reproducir la canción: {e}")
+                self.mostrar_error("No se pudo reproducir la canción", str(e))
+
+    def mostrar_error(self, mensaje, detalle):
+        messagebox.showerror(mensaje, detalle)
 
     def actualizar_info_cancion(self):
         if self.archivo_actual:
@@ -163,8 +171,9 @@ class ReproductorMP3:
                 audio = MP3(self.archivo_actual)
                 artista = audio.get('TPE1', ["Artista desconocido"])[0]
                 self.artista_cancion.config(text=artista)
-            except Exception:
+            except Exception as e:
                 self.artista_cancion.config(text="Artista desconocido")
+                self.mostrar_error("Error al leer metadatos", str(e))
 
     def pausar_reproducir(self):
         if pygame.mixer.music.get_busy():
