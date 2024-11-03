@@ -24,10 +24,24 @@ class ReproductorMP3:
         self.MUSICA_TERMINADA = pygame.USEREVENT + 1
         pygame.mixer.music.set_endevent(self.MUSICA_TERMINADA)
 
-        # Configurar la interfaz
-        self.lista = tk.Listbox(master, width=50, height=15, bg="#ffffff", selectbackground="#007BFF", font=("Arial", 12))
-        self.lista.pack(pady=20)
-        self.lista.bind('<ButtonRelease-1>', self.reproducir_cancion_seleccionada)
+        # Marco principal para la lista de canciones
+        self.frame_lista = tk.Frame(master, bg="#282c34")
+        self.frame_lista.pack(pady=20, fill=tk.BOTH, expand=True)
+
+        # Canvas para la lista de canciones
+        self.canvas = tk.Canvas(self.frame_lista, bg="#282c34", highlightthickness=0)
+        self.scrollbar = tk.Scrollbar(self.frame_lista, orient="vertical", command=self.canvas.yview, bg="#282c34")  # Fondo transparente
+        self.scrollable_frame = tk.Frame(self.canvas, bg="#282c34")
+
+        self.scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Vínculo para desplazamiento del mouse
+        self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
 
         # Marco para mostrar la canción actual
         self.marco_bajo = tk.Frame(master, bg="#3e444f")
@@ -64,7 +78,7 @@ class ReproductorMP3:
         self.master.bind("<Button-3>", self.mostrar_menu_contextual)
 
         self.cargar_ajustes()  # Cargar ajustes al iniciar
-        self.cargar_mp3()  # Cargar archivos al iniciar
+        self.cargar_mp3()      # Cargar archivos al iniciar
         self.configurar_evento_finalizacion()  # Configurar el evento de finalización
 
     def mostrar_menu_contextual(self, event):
@@ -75,15 +89,13 @@ class ReproductorMP3:
         ventana_ajustes.title("Ajustes")
         ventana_ajustes.geometry("300x200")
 
-        etiqueta_mostrar_por = tk.Label(ventana_ajustes, text="Mostrar por:")
-        etiqueta_mostrar_por.pack(pady=10)
+        tk.Label(ventana_ajustes, text="Mostrar por:").pack(pady=10)
 
         self.combo_mostrar_por_ajustes = ttk.Combobox(ventana_ajustes, state='readonly', values=["Canción"])
-        self.combo_mostrar_por_ajustes.current(0)  # Establecer el valor actual
+        self.combo_mostrar_por_ajustes.current(0)
         self.combo_mostrar_por_ajustes.pack(pady=10)
 
-        boton_guardar = tk.Button(ventana_ajustes, text="Guardar", command=lambda: self.guardar_ajustes(ventana_ajustes))
-        boton_guardar.pack(pady=10)
+        tk.Button(ventana_ajustes, text="Guardar", command=lambda: self.guardar_ajustes(ventana_ajustes)).pack(pady=10)
 
     def cargar_ajustes(self):
         if os.path.exists('ajustes.json'):
@@ -98,46 +110,44 @@ class ReproductorMP3:
         ventana.destroy()
 
     def configurar_evento_finalizacion(self):
-        self.master.after(100, self.check_music_end)  # Comienza a comprobar el fin de la música
+        self.master.after(100, self.check_music_end)
 
     def check_music_end(self):
         for event in pygame.event.get():
-            if event.type == self.MUSICA_TERMINADA:  # Verifica si la música ha terminado
-                self.cancion_siguiente()  # Reproduce la siguiente canción
-        self.master.after(100, self.check_music_end)  # Revisa el evento cada 100 ms
+            if event.type == self.MUSICA_TERMINADA:
+                self.cancion_siguiente()
+        self.master.after(100, self.check_music_end)
 
     def cargar_mp3(self):
-        directorio = 'files'  # Carpeta estática
-        self.archivos_mp3 = []
-        self.lista.delete(0, tk.END)  # Limpia la lista existente
+        directorio = 'files'
+        self.archivos_mp3.clear()  # Limpia la lista existente
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
 
         for root, _, files in os.walk(directorio):
             for file in files:
                 if file.endswith(".mp3"):
                     ruta_completa = os.path.join(root, file)
                     self.archivos_mp3.append(ruta_completa)
-                    self.lista.insert(tk.END, file)  # Mostrar solo canciones
+                    label = tk.Label(self.scrollable_frame, text=file, bg="#3e444f", fg="#ffffff", font=("Arial", 12), relief="solid", bd=1, width=50, anchor='w')
+                    label.pack(pady=2, padx=5, fill=tk.X)
+                    label.bind('<Button-1>', lambda event, index=len(self.archivos_mp3): self.reproducir_cancion(index - 1))
 
-    def reproducir_cancion_seleccionada(self, event):
-        seleccion = self.lista.curselection()
-        if seleccion:
-            self.indice_actual = seleccion[0]
-            self.archivo_actual = self.archivos_mp3[self.indice_actual]
-            pygame.mixer.music.load(self.archivo_actual)
-            pygame.mixer.music.play()
-            self.actualizar_info_cancion()
+    def on_mouse_wheel(self, event):
+        self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
+
+    def reproducir_cancion(self, index):
+        self.indice_actual = index
+        self.archivo_actual = self.archivos_mp3[self.indice_actual]
+        pygame.mixer.music.load(self.archivo_actual)
+        pygame.mixer.music.play()
+        self.actualizar_info_cancion()
 
     def actualizar_info_cancion(self):
         if self.archivo_actual:
             nombre_archivo = os.path.basename(self.archivo_actual)
-            nombre_sin_extension = os.path.splitext(nombre_archivo)[0]  # Elimina la extensión
-            max_length = 24  # Longitud máxima del texto
-
-            # Recorta el nombre si es necesario
-            if len(nombre_sin_extension) > max_length:
-                nombre_sin_extension = nombre_sin_extension[:max_length - 3] + "..."
-
-            self.titulo_cancion.config(text=nombre_sin_extension)
+            nombre_sin_extension = os.path.splitext(nombre_archivo)[0]
+            self.titulo_cancion.config(text=(nombre_sin_extension[:21] + '...') if len(nombre_sin_extension) > 24 else nombre_sin_extension)
 
             try:
                 audio = MP3(self.archivo_actual)
@@ -149,10 +159,10 @@ class ReproductorMP3:
     def pausar_reproducir(self):
         if pygame.mixer.music.get_busy():
             pygame.mixer.music.pause()
-            self.boton_pausa_reproducir.config(text="▶️")  # Cambia a botón de reproducir
+            self.boton_pausa_reproducir.config(text="▶️")
         else:
             pygame.mixer.music.unpause()
-            self.boton_pausa_reproducir.config(text="⏸️")  # Cambia a botón de pausa
+            self.boton_pausa_reproducir.config(text="⏸️")
 
     def cancion_anterior(self):
         if self.indice_actual > 0:
@@ -168,9 +178,6 @@ class ReproductorMP3:
         self.archivo_actual = self.archivos_mp3[self.indice_actual]
         pygame.mixer.music.load(self.archivo_actual)
         pygame.mixer.music.play()
-        self.lista.selection_clear(0, tk.END)
-        self.lista.selection_set(self.indice_actual)
-        self.lista.activate(self.indice_actual)
         self.actualizar_info_cancion()
 
 if __name__ == "__main__":
