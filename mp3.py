@@ -5,9 +5,8 @@ import tkinter as tk
 from tkinter import Toplevel, ttk, messagebox
 from mutagen.mp3 import MP3
 from modules.add_music import añadir_musica
-from modules.license import abrir_informacion  # Importar la función desde license.py
+from modules.license import abrir_informacion
 
-# Inicializa todos los módulos de Pygame
 pygame.init()
 pygame.mixer.init()
 
@@ -22,19 +21,15 @@ class ReproductorMP3:
         self.archivo_actual = None
         self.indice_actual = 0
 
-        # Evento de finalización de música
         self.MUSICA_TERMINADA = pygame.USEREVENT + 1
         pygame.mixer.music.set_endevent(self.MUSICA_TERMINADA)
 
-        # Configuración de la interfaz
         self.setup_ui()
-
         self.modo_mostrar_por = self.cargar_ajustes()
         self.cargar_mp3()
         self.configurar_evento_finalizacion()
 
     def setup_ui(self):
-        # Marco principal para la lista de canciones
         self.frame_lista = tk.Frame(self.master, bg="#282c34")
         self.frame_lista.pack(pady=20, fill=tk.BOTH, expand=True)
 
@@ -48,14 +43,11 @@ class ReproductorMP3:
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
         self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
 
-        # Marco para mostrar la canción actual
         self.marco_bajo = tk.Frame(self.master, bg="#3e444f")
         self.marco_bajo.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(10, 10))
 
-        # Marco para los textos
         self.marco_textos = tk.Frame(self.marco_bajo, bg="#3e444f")
         self.marco_textos.pack(side=tk.LEFT, padx=10)
 
@@ -65,25 +57,23 @@ class ReproductorMP3:
         self.artista_cancion = tk.Label(self.marco_textos, text="", bg="#3e444f", fg="#a9a9a9", font=("Arial", 12))
         self.artista_cancion.pack(side=tk.TOP)
 
-        # Marco para los botones de control
         self.marco_botones = tk.Frame(self.marco_bajo, bg="#3e444f")
         self.marco_botones.pack(side=tk.RIGHT)
 
-        self.boton_anterior = tk.Button(self.marco_botones, text="⏮️", command=lambda: self.cambiar_cancion(-1), bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
-        self.boton_anterior.grid(row=0, column=0, padx=5)
+        self.boton_anterior = self.crear_boton(self.marco_botones, "⏮️", lambda: self.cambiar_cancion(-1))
+        self.boton_pausa_reproducir = self.crear_boton(self.marco_botones, "▶️", self.pausar_reproducir)
+        self.boton_siguiente = self.crear_boton(self.marco_botones, "⏭️", lambda: self.cambiar_cancion(1))
 
-        self.boton_pausa_reproducir = tk.Button(self.marco_botones, text="▶️", command=self.pausar_reproducir, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
-        self.boton_pausa_reproducir.grid(row=0, column=1, padx=5)
-
-        self.boton_siguiente = tk.Button(self.marco_botones, text="⏭️", command=lambda: self.cambiar_cancion(1), bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
-        self.boton_siguiente.grid(row=0, column=2, padx=5)
-
-        # Menú contextual para ajustes
         self.menu_contextual = tk.Menu(self.master, tearoff=0)
         self.menu_contextual.add_command(label="Ajustes", command=self.abrir_ajustes)
         self.menu_contextual.add_command(label="Añadir música", command=self.añadir_musica)
-        self.menu_contextual.add_command(label="Información", command=lambda: abrir_informacion(self.master))  # Llama a la función desde license.py
+        self.menu_contextual.add_command(label="Información", command=lambda: abrir_informacion(self.master))
         self.master.bind("<Button-3>", self.mostrar_menu_contextual)
+
+    def crear_boton(self, parent, texto, comando):
+        boton = tk.Button(parent, text=texto, command=comando, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
+        boton.grid(row=0, column=len(parent.grid_slaves()), padx=5)
+        return boton
 
     def mostrar_menu_contextual(self, event):
         self.menu_contextual.post(event.x_root, event.y_root)
@@ -128,20 +118,45 @@ class ReproductorMP3:
     def cargar_mp3(self):
         directorio = 'files'
         self.archivos_mp3.clear()
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
+        self.limpiar_lista()
 
         for root, _, files in os.walk(directorio):
             for file in files:
                 if file.endswith(".mp3"):
                     ruta_completa = os.path.join(root, file)
                     self.archivos_mp3.append(ruta_completa)
-                    self.crear_label_cancion(file)
+                    self.crear_label_cancion(file, ruta_completa)
 
-    def crear_label_cancion(self, file):
-        label = tk.Label(self.scrollable_frame, text=file, bg="#3e444f", fg="#ffffff", font=("Arial", 12), relief="solid", bd=1, width=50, anchor='w')
-        label.pack(pady=2, padx=5, fill=tk.X)
-        label.bind('<Button-1>', lambda event, index=len(self.archivos_mp3): self.reproducir_cancion(index - 1))
+    def limpiar_lista(self):
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+
+    def crear_label_cancion(self, file, ruta_completa):
+        artista = self.obtener_artista(ruta_completa)
+
+        frame_label = tk.Frame(self.scrollable_frame, bg="#3e444f")
+        frame_label.pack(pady=5, padx=5, fill=tk.X)
+
+        titulo_label = tk.Label(frame_label, text=file, bg="#3e444f", fg="#ffffff", font=("Arial", 12, "bold"), anchor='w')
+        titulo_label.pack(fill=tk.X)
+
+        artista_label = tk.Label(frame_label, text=artista, bg="#3e444f", fg="#ffffff", font=("Arial", 10), anchor='w')
+        artista_label.pack(anchor='w')
+
+        self.asignar_evento_click(frame_label, titulo_label, artista_label)
+
+    def asignar_evento_click(self, frame_label, titulo_label, artista_label):
+        index = len(self.archivos_mp3) - 1  # Use el último índice disponible
+        frame_label.bind('<Button-1>', lambda event: self.reproducir_cancion(index))
+        titulo_label.bind('<Button-1>', lambda event: self.reproducir_cancion(index))
+        artista_label.bind('<Button-1>', lambda event: self.reproducir_cancion(index))
+
+    def obtener_artista(self, ruta):
+        try:
+            audio = MP3(ruta)
+            return audio.get('TPE1', ["Artista desconocido"])[0] or "Artista desconocido"
+        except Exception:
+            return "Artista desconocido"
 
     def on_mouse_wheel(self, event):
         self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
@@ -150,13 +165,16 @@ class ReproductorMP3:
         if 0 <= index < len(self.archivos_mp3):
             self.indice_actual = index
             self.archivo_actual = self.archivos_mp3[self.indice_actual]
-            try:
-                pygame.mixer.music.load(self.archivo_actual)
-                pygame.mixer.music.play()
-                self.actualizar_info_cancion()
-                self.boton_pausa_reproducir.config(text="⏸️")
-            except Exception as e:
-                self.mostrar_error("No se pudo reproducir la canción", str(e))
+            self.intentar_reproducir()
+
+    def intentar_reproducir(self):
+        try:
+            pygame.mixer.music.load(self.archivo_actual)
+            pygame.mixer.music.play()
+            self.actualizar_info_cancion()
+            self.boton_pausa_reproducir.config(text="⏸️")
+        except Exception as e:
+            self.mostrar_error("No se pudo reproducir la canción", str(e))
 
     def mostrar_error(self, mensaje, detalle):
         messagebox.showerror(mensaje, detalle)
@@ -167,13 +185,8 @@ class ReproductorMP3:
             nombre_sin_extension = os.path.splitext(nombre_archivo)[0]
             self.titulo_cancion.config(text=(nombre_sin_extension[:21] + '...') if len(nombre_sin_extension) > 24 else nombre_sin_extension)
 
-            try:
-                audio = MP3(self.archivo_actual)
-                artista = audio.get('TPE1', ["Artista desconocido"])[0]
-                self.artista_cancion.config(text=artista)
-            except Exception as e:
-                self.artista_cancion.config(text="Artista desconocido")
-                self.mostrar_error("Error al leer metadatos", str(e))
+            artista = self.obtener_artista(self.archivo_actual)
+            self.artista_cancion.config(text=artista)
 
     def pausar_reproducir(self):
         if pygame.mixer.music.get_busy():
