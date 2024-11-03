@@ -1,4 +1,4 @@
-# Clasificador de Texto
+# Reproductor MP3
 
 Este proyecto es un reproductor MP3 hecho con Python. La aplicación permite añadir musica en la carpeta "files", ademas de poseer botones para la siguiente y anterior cancion, y poder pausar la misma.
 
