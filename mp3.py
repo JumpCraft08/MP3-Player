@@ -4,6 +4,7 @@ import pygame
 import tkinter as tk
 from tkinter import Toplevel, ttk
 from mutagen.mp3 import MP3
+from modules.add_music import añadir_musica  # Importar la función
 
 # Inicializa todos los módulos de Pygame
 pygame.init()
@@ -79,10 +80,14 @@ class ReproductorMP3:
         # Menú contextual para ajustes
         self.menu_contextual = tk.Menu(self.master, tearoff=0)
         self.menu_contextual.add_command(label="Ajustes", command=self.abrir_ajustes)
+        self.menu_contextual.add_command(label="Añadir música", command=self.añadir_musica)  # Añadir opción para añadir música
         self.master.bind("<Button-3>", self.mostrar_menu_contextual)
 
     def mostrar_menu_contextual(self, event):
         self.menu_contextual.post(event.x_root, event.y_root)
+
+    def añadir_musica(self):
+        añadir_musica(self.cargar_mp3)  # Pasar la referencia al método cargar_mp3
 
     def abrir_ajustes(self):
         ventana_ajustes = Toplevel(self.master)
