@@ -20,7 +20,6 @@ class ReproductorMP3:
         self.archivos_mp3 = []
         self.archivo_actual = None
         self.indice_actual = 0
-
         self.MUSICA_TERMINADA = pygame.USEREVENT + 1
         pygame.mixer.music.set_endevent(self.MUSICA_TERMINADA)
 
@@ -106,9 +105,8 @@ class ReproductorMP3:
 
     def asignar_evento_click(self, frame_label, titulo_label, artista_label):
         index = len(self.archivos_mp3) - 1  # Use el último índice disponible
-        frame_label.bind('<Button-1>', lambda event: self.reproducir_cancion(index))
-        titulo_label.bind('<Button-1>', lambda event: self.reproducir_cancion(index))
-        artista_label.bind('<Button-1>', lambda event: self.reproducir_cancion(index))
+        for widget in (frame_label, titulo_label, artista_label):
+            widget.bind('<Button-1>', lambda event, idx=index: self.reproducir_cancion(idx))
 
     def obtener_artista(self, ruta):
         try:
