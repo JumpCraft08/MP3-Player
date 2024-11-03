@@ -46,7 +46,7 @@ pip install -r requirements.txt
 > Si tienes algun error, probablemente necesites ejecutar el símbolo del sistema como administrador.
 
 <div>
-    <img src="https://i.alexflipnote.dev/4QPnZiX.gif" alt="uvu">
+    <img src="assets/README/3-README.gif" alt="uvu">
     <br>
     <br>
 </div>
