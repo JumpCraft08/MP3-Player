@@ -224,7 +224,6 @@ class ReproductorMP3:
             self.lista.activate(self.indice_actual)  # Activar la nueva canción en la lista
             self.actualizar_info_cancion()  # Actualiza la información de la canción
 
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = ReproductorMP3(root)
