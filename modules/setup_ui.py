@@ -15,7 +15,7 @@ def setup_ui(self):
     self.canvas.configure(yscrollcommand=self.scrollbar.set)
     self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-    self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
+    self.canvas.bind_all("<MouseWheel>", lambda event: on_mouse_wheel(self, event))  # Llamada modificada
 
     self.marco_bajo = tk.Frame(self.master, bg="#3e444f")
     self.marco_bajo.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(10, 10))
@@ -35,9 +35,18 @@ def setup_ui(self):
     self.boton_anterior = self.crear_boton(self.marco_botones, "⏮️", lambda: self.cambiar_cancion(-1))
     self.boton_pausa_reproducir = self.crear_boton(self.marco_botones, "▶️", self.pausar_reproducir)
     self.boton_siguiente = self.crear_boton(self.marco_botones, "⏭️", lambda: self.cambiar_cancion(1))
+    
+    # Botón de Aleatorio
+    self.boton_aleatorio = self.crear_boton(self.marco_botones, "🔀", self.toggle_aleatorio)
 
     self.menu_contextual = tk.Menu(self.master, tearoff=0)
     self.menu_contextual.add_command(label="Ajustes", command=self.abrir_ajustes)
     self.menu_contextual.add_command(label="Añadir música", command=self.añadir_musica)
     self.menu_contextual.add_command(label="Información", command=lambda: abrir_informacion(self.master))
     self.master.bind("<Button-3>", self.mostrar_menu_contextual)
+
+def mostrar_error(master, mensaje, detalle):
+    tk.messagebox.showerror(mensaje, detalle)
+
+def on_mouse_wheel(self, event):
+    self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
