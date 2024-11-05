@@ -67,15 +67,3 @@ def setup_ui(self):
     self.menu_contextual.add_command(label="Añadir música", command=self.añadir_musica)
     self.menu_contextual.add_command(label="Información", command=lambda: abrir_informacion(self.master))
     self.master.bind("<Button-3>", self.mostrar_menu_contextual)
-
-def abrir_ajustes(self):
-    ventana_ajustes = Toplevel(self.master)
-    ventana_ajustes.title("Ajustes")
-    ventana_ajustes.geometry("300x200")
-
-    tk.Label(ventana_ajustes, text="Mostrar por:").pack(pady=10)
-    self.combo_mostrar_por_ajustes = ttk.Combobox(ventana_ajustes, state='readonly', values=["Canción"])
-    self.combo_mostrar_por_ajustes.current(0)
-    self.combo_mostrar_por_ajustes.pack(pady=10)
-
-    tk.Button(ventana_ajustes, text="Guardar", command=lambda: self.guardar_ajustes(ventana_ajustes)).pack(pady=10)

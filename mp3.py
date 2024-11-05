@@ -32,17 +32,6 @@ class ReproductorMP3:
         self.tiempo_actual = 0  # Variable para almacenar el tiempo actual
         self.master.after(1000, self.actualizar_tiempo_actual)  # Actualizar el tiempo actual cada segundo
 
-    def crear_boton(self, parent, texto, comando):
-        boton = tk.Button(parent, text=texto, command=comando, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
-        boton.grid(row=0, column=len(parent.grid_slaves()), padx=5)
-        return boton
-
-    def mostrar_menu_contextual(self, event):
-        self.menu_contextual.post(event.x_root, event.y_root)
-
-    def añadir_musica(self):
-        añadir_musica(self.cargar_mp3)
-
     def abrir_ajustes(self):
         ventana_ajustes = Toplevel(self.master)
         ventana_ajustes.title("Ajustes")
@@ -54,6 +43,17 @@ class ReproductorMP3:
         self.combo_mostrar_por_ajustes.pack(pady=10)
 
         tk.Button(ventana_ajustes, text="Guardar", command=lambda: self.guardar_ajustes(ventana_ajustes)).pack(pady=10)
+        
+    def crear_boton(self, parent, texto, comando):
+        boton = tk.Button(parent, text=texto, command=comando, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
+        boton.grid(row=0, column=len(parent.grid_slaves()), padx=5)
+        return boton
+
+    def mostrar_menu_contextual(self, event):
+        self.menu_contextual.post(event.x_root, event.y_root)
+
+    def añadir_musica(self):
+        añadir_musica(self.cargar_mp3)
 
     def cargar_ajustes(self):
         if os.path.exists('ajustes.json'):
