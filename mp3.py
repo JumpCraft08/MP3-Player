@@ -1,12 +1,11 @@
 import os
 import json
-import random
 import pygame
 import tkinter as tk
 from tkinter import Toplevel, ttk, messagebox
 from mutagen.mp3 import MP3
 from modules.add_music import añadir_musica
-from modules.setup_ui import setup_ui, mostrar_error, on_mouse_wheel
+from modules.setup_ui import setup_ui
 
 pygame.init()
 pygame.mixer.init()
@@ -15,22 +14,21 @@ class ReproductorMP3:
     def __init__(self, master):
         self.master = master
         self.master.title("Reproductor MP3")
-        self.master.geometry("500x400")
+        self.master.geometry("850x400")
         self.master.configure(bg="#282c34")
 
         self.archivos_mp3 = []
         self.archivo_actual = None
         self.indice_actual = 0
-        self.ultimo_indice = None
-        self.modo_aleatorio = False
-        self.historial_canciones = []
         self.MUSICA_TERMINADA = pygame.USEREVENT + 1
         pygame.mixer.music.set_endevent(self.MUSICA_TERMINADA)
 
-        setup_ui(self)
+        setup_ui(self)  # Llama a la función setup_ui
         self.modo_mostrar_por = self.cargar_ajustes()
         self.cargar_mp3()
         self.configurar_evento_finalizacion()
+
+        self.duracion_total = 0  # Variable para almacenar la duración total de la canción
 
     def crear_boton(self, parent, texto, comando):
         boton = tk.Button(parent, text=texto, command=comando, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
@@ -108,7 +106,7 @@ class ReproductorMP3:
         self.asignar_evento_click(frame_label, titulo_label, artista_label)
 
     def asignar_evento_click(self, frame_label, titulo_label, artista_label):
-        index = len(self.archivos_mp3) - 1
+        index = len(self.archivos_mp3) - 1  # Use el último índice disponible
         for widget in (frame_label, titulo_label, artista_label):
             widget.bind('<Button-1>', lambda event, idx=index: self.reproducir_cancion(idx))
 
@@ -119,23 +117,31 @@ class ReproductorMP3:
         except Exception:
             return "Artista desconocido"
 
+    def on_mouse_wheel(self, event):
+        self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
+
     def reproducir_cancion(self, index):
         if 0 <= index < len(self.archivos_mp3):
-            self.ultimo_indice = self.indice_actual
             self.indice_actual = index
             self.archivo_actual = self.archivos_mp3[self.indice_actual]
             self.intentar_reproducir()
-            if self.modo_aleatorio:
-                self.historial_canciones.append(self.indice_actual)
 
     def intentar_reproducir(self):
         try:
             pygame.mixer.music.load(self.archivo_actual)
             pygame.mixer.music.play()
+
+            # Obtener la duración con Mutagen
+            audio = MP3(self.archivo_actual)
+            self.duracion_total = audio.info.length  # Duración total de la canción (en segundos)
+
             self.actualizar_info_cancion()
             self.boton_pausa_reproducir.config(text="⏸️")
         except Exception as e:
-            mostrar_error(self.master, "No se pudo reproducir la canción", str(e))
+            self.mostrar_error("No se pudo reproducir la canción", str(e))
+
+    def mostrar_error(self, mensaje, detalle):
+        messagebox.showerror(mensaje, detalle)
 
     def actualizar_info_cancion(self):
         if self.archivo_actual:
@@ -146,6 +152,9 @@ class ReproductorMP3:
             artista = self.obtener_artista(self.archivo_actual)
             self.artista_cancion.config(text=artista)
 
+            # Actualizar la duración total de la canción en la interfaz
+            self.tiempo_total_label.config(text=self.formatear_tiempo(int(self.duracion_total)))
+
     def pausar_reproducir(self):
         if pygame.mixer.music.get_busy():
             pygame.mixer.music.pause()
@@ -155,29 +164,26 @@ class ReproductorMP3:
             self.boton_pausa_reproducir.config(text="⏸️")
 
     def cambiar_cancion(self, direccion):
-        if direccion == 1:  # Siguiente canción
-            if self.modo_aleatorio:
-                nuevo_indice = random.randint(0, len(self.archivos_mp3) - 1)
-                self.reproducir_cancion(nuevo_indice)
-            else:
-                nuevo_indice = self.indice_actual + direccion
-                if 0 <= nuevo_indice < len(self.archivos_mp3):
-                    self.reproducir_cancion(nuevo_indice)
-        elif direccion == -1:  # Canción anterior
-            if self.modo_aleatorio:
-                if self.historial_canciones:
-                    self.historial_canciones.pop()
-                    if self.historial_canciones:
-                        self.reproducir_cancion(self.historial_canciones.pop())
-            else:
-                nuevo_indice = self.indice_actual - 1
-                if 0 <= nuevo_indice < len(self.archivos_mp3):
-                    self.reproducir_cancion(nuevo_indice)
+        nuevo_indice = self.indice_actual + direccion
+        if 0 <= nuevo_indice < len(self.archivos_mp3):
+            self.reproducir_cancion(nuevo_indice)
 
-    def toggle_aleatorio(self):
-        self.modo_aleatorio = not self.modo_aleatorio
-        estado = "Activado" if self.modo_aleatorio else "Desactivado"
-        messagebox.showinfo("Modo Aleatorio", f"Modo aleatorio {estado}")
+    def actualizar_slider(self):
+        if pygame.mixer.music.get_busy():
+            tiempo_actual = pygame.mixer.music.get_pos() / 1000  # Obtener el tiempo actual en segundos
+            self.slider.set(tiempo_actual / self.duracion_total * 100)  # Actualizar el slider en porcentaje
+            self.tiempo_actual_label.config(text=self.formatear_tiempo(int(tiempo_actual)))
+
+        self.master.after(1000, self.actualizar_slider)  # Actualizar cada segundo
+
+    def mover_slider(self, event):
+        nuevo_tiempo = self.slider.get() / 100 * self.duracion_total
+        pygame.mixer.music.set_pos(nuevo_tiempo)
+
+    def formatear_tiempo(self, segundos):
+        minutos = segundos // 60
+        segundos = segundos % 60
+        return f"{minutos:02}:{segundos:02}"
 
 if __name__ == "__main__":
     root = tk.Tk()
