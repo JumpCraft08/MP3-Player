@@ -29,6 +29,8 @@ class ReproductorMP3:
         self.configurar_evento_finalizacion()
 
         self.duracion_total = 0  # Variable para almacenar la duración total de la canción
+        self.tiempo_actual = 0  # Variable para almacenar el tiempo actual
+        self.master.after(1000, self.actualizar_tiempo_actual)  # Actualizar el tiempo actual cada segundo
 
     def crear_boton(self, parent, texto, comando):
         boton = tk.Button(parent, text=texto, command=comando, bg="#007BFF", fg="#ffffff", font=("Arial", 14), width=3)
@@ -168,17 +170,17 @@ class ReproductorMP3:
         if 0 <= nuevo_indice < len(self.archivos_mp3):
             self.reproducir_cancion(nuevo_indice)
 
-    def actualizar_slider(self):
-        if pygame.mixer.music.get_busy():
-            tiempo_actual = pygame.mixer.music.get_pos() / 1000  # Obtener el tiempo actual en segundos
-            self.slider.set(tiempo_actual / self.duracion_total * 100)  # Actualizar el slider en porcentaje
-            self.tiempo_actual_label.config(text=self.formatear_tiempo(int(tiempo_actual)))
-
-        self.master.after(1000, self.actualizar_slider)  # Actualizar cada segundo
+    def actualizar_tiempo_actual(self):
+        if pygame.mixer.music.get_busy():  # Solo actualizar si la música está sonando
+            self.tiempo_actual = pygame.mixer.music.get_pos() / 1000  # Obtener el tiempo actual en segundos
+            self.tiempo_actual_label.config(text=self.formatear_tiempo(int(self.tiempo_actual)))  # Mostrar el tiempo actual
+        self.master.after(1000, self.actualizar_tiempo_actual)  # Actualizar cada segundo
 
     def mover_slider(self, event):
         nuevo_tiempo = self.slider.get() / 100 * self.duracion_total
         pygame.mixer.music.set_pos(nuevo_tiempo)
+        self.tiempo_actual = nuevo_tiempo  # Actualizar el tiempo actual
+        self.tiempo_actual_label.config(text=self.formatear_tiempo(int(self.tiempo_actual)))  # Actualizar el tiempo actual
 
     def formatear_tiempo(self, segundos):
         minutos = segundos // 60
